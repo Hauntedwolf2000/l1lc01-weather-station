@@ -55,3 +55,7 @@
 .cspot{position:relative;z-index:60!important;pointer-events:none!important;outline:8px solid #FFC93C;outline-offset:8px;border-radius:24px;animation:cSpot 1.1s ease-in-out infinite}
 @keyframes cSpot{50%{outline-color:#FF8A3D}}
 @media (prefers-reduced-motion:reduce){#coach .who,#coach .who img,.cspot,#coach .nxt,#coach .gate button{animation:none!important}#coach.in .who{transform:none}}
+
+/* the Next / Let's go button only appears once the guide has finished speaking */
+#coach .nxt{visibility:hidden;opacity:0;transform:scale(.85);transition:opacity .25s ease,transform .25s ease}
+#coach .nxt.ready{visibility:visible;opacity:1;transform:none}

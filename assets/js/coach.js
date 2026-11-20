@@ -18,28 +18,30 @@ window.Coach = (function () {
   }
   var AUD = null;
   function audStop() { if (AUD) { try { AUD.onended = AUD.onerror = AUD.onplay = null; AUD.pause(); } catch (e) {} AUD = null; } }
-  function say(text, ended, id) {
+  function say(text, ended, id, sync) {
     var my = tok, done = false, est = Math.max(2200, text.length * 62 + 1200);
     function fin() { if (done || my !== tok) return; done = true; clearTimeout(tfb); audStop(); ended(); }
     if (id) { // recorded voice-over
-      try { var a = new Audio('assets/audio/' + id + '.mp3'); AUD = a; a.onplay = function () { if (my === tok && root) root.classList.add('talk'); };
-        a.onended = function () { if (my !== tok) return; if (root) root.classList.remove('talk'); setTimeout(fin, 500); };
-        a.onerror = function () { if (my === tok && AUD === a) { AUD = null; say(text, ended); } }; tfb = setTimeout(fin, 20000);
-        var pr = a.play(); if (pr && pr.catch) pr.catch(function () { if (my === tok && AUD === a) { AUD = null; clearTimeout(tfb); say(text, ended); } }); return; } catch (e) {} }
+      try { var a = new Audio('assets/audio/' + id + '.mp3'); AUD = a; a.onplay = function () { if (my === tok && root) root.classList.add('talk'); }; a.onplaying = a.ondurationchange = function () { if (my === tok && sync && isFinite(a.duration) && a.duration > 0 && !a._synced) { a._synced = 1; sync(a.duration * 1000); } };
+        a.onended = function () { if (my !== tok) return; if (root) root.classList.remove('talk'); fin(); };
+        a.onerror = function () { if (my === tok && AUD === a) { AUD = null; say(text, ended, null, sync); } }; tfb = setTimeout(fin, 30000);
+        var pr = a.play(); if (pr && pr.catch) pr.catch(function () { if (my === tok && AUD === a) { AUD = null; clearTimeout(tfb); say(text, ended, null, sync); } }); return; } catch (e) {} }
     if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) { tfb = setTimeout(fin, est); return; }
     try {
       speechSynthesis.cancel();
       var u = new SpeechSynthesisUtterance(text), v = pickVoice(); if (v) u.voice = v; u.lang = (v && v.lang) || 'en-US'; u.rate = 0.92; u.pitch = 1.25;
       u.onstart = function () { if (my === tok && root) root.classList.add('talk'); };
-      u.onend = u.onerror = function () { if (my !== tok) return; if (root) root.classList.remove('talk'); setTimeout(fin, 450); };
+      u.onend = u.onerror = function () { if (my !== tok) return; if (root) root.classList.remove('talk'); fin(); };
       speechSynthesis.speak(u); tfb = setTimeout(fin, est * 1.8 + 2500); // some browsers never fire onend
     } catch (e) { tfb = setTimeout(fin, est); }
   }
-  function typeText(el, text, my) { // subtitles type out; the full text is laid out invisibly first so the bubble never grows or jumps
+  var tyc = null;
+  function typeText(el, text, my) { // subtitles type out over time; the full text is laid out invisibly first so the bubble never grows or jumps
     var vis = document.createElement('span'), hid = document.createElement('span'); hid.style.visibility = 'hidden'; hid.textContent = text; el.textContent = ''; el.appendChild(vis); el.appendChild(hid);
-    var i = 0, step = Math.max(1, Math.round(text.length / 70));
-    clearInterval(tty); tty = setInterval(function () { if (my !== tok) { clearInterval(tty); return; } i = Math.min(text.length, i + step); vis.textContent = text.slice(0, i); hid.textContent = text.slice(i); if (i >= text.length) clearInterval(tty); }, 32);
+    tyc = { t0: Date.now(), total: Math.max(1200, text.length * 55) };
+    clearInterval(tty); tty = setInterval(function () { if (my !== tok || !tyc) { clearInterval(tty); return; } var f = Math.min(1, (Date.now() - tyc.t0) / tyc.total), i = Math.ceil(text.length * f); vis.textContent = text.slice(0, i); hid.textContent = text.slice(i); if (f >= 1) clearInterval(tty); }, 30);
   }
+  function typeSync(ms) { if (tyc) { tyc.t0 = Date.now(); tyc.total = Math.max(800, ms * 0.88); } } // finish typing just before the voice finishes
 
   function showLine(i) {
     if (!st || !root) return; var my = ++tok, L = st.lines[i], bub = root.querySelector('.say');
@@ -51,12 +53,12 @@ window.Coach = (function () {
       if (L.list) html += '<ul class="ls">' + L.list.map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ul>';
       if (L.steps && st.o.steps) html += '<div class="jr">' + st.o.steps.map(function (n) { return '<i title="' + n + '"></i>'; }).join('') + '</div>';
       html += '<div class="more"><span class="dots">' + st.lines.map(function (x, k) { return '<b class="' + (k === i ? 'on' : '') + '"></b>'; }).join('') + '</span><button class="nxt" type="button">' + (i === st.lines.length - 1 ? 'Let’s go!' : 'Next') + '</button></div>';
-      bub.innerHTML = html; bub.classList.add('show');
+      bub.innerHTML = html; bub.classList.add('show'); st.ready = false;
       typeText(bub.querySelector('.tx'), L.t, my);
       if (L.spot) { var s = document.querySelector(L.spot); if (s) s.classList.add('cspot'); }
       Array.prototype.forEach.call(bub.querySelectorAll('.ls li'), function (x, k) { setTimeout(function () { if (my === tok) x.classList.add('show'); }, 900 + k * 1500); });
       Array.prototype.forEach.call(bub.querySelectorAll('.jr i'), function (x, k) { setTimeout(function () { if (my === tok) x.classList.add('f'); }, 1200 + k * 600); });
-      say(L.say || L.t, function () { if (my !== tok || !st) return; if (i < st.lines.length - 1) showLine(i + 1); else leave(); }, L.id);
+      say(L.say || L.t, function () { if (my !== tok || !st) return; st.ready = true; var nb = bub.querySelector('.nxt'); if (nb) { nb.classList.add('ready'); try { nb.focus(); } catch (e) {} } }, L.id, typeSync);
     }, i === 0 ? 0 : 260);
   }
   function leave() {
@@ -74,7 +76,7 @@ window.Coach = (function () {
     stage().appendChild(root); st = { lines: lines, o: o, i: 0 }; inertSet(true);
     var sk = root.querySelector('.skip');
     sk.addEventListener('click', leave);
-    root.querySelector('.say').addEventListener('click', function (e) { if (!e.target.closest('.nxt') || !st) return; if (st.i < st.lines.length - 1) showLine(st.i + 1); else leave(); });
+    root.querySelector('.say').addEventListener('click', function (e) { if (!e.target.closest('.nxt') || !st || !st.ready) return; if (st.i < st.lines.length - 1) showLine(st.i + 1); else leave(); });
     root.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.preventDefault(); leave(); } });
     function begin() { var im = root.querySelector('.who img'), go = function () { if (!root) return; root.classList.add('on', 'in'); setTimeout(function () { if (root) root.classList.add('idle'); }, 900); setTimeout(function () { if (st) showLine(0); }, 800); sk.focus(); }; if (im && im.decode) im.decode().then(go, go); else go(); }
     var active = true; try { active = navigator.userActivation ? navigator.userActivation.hasBeenActive : true; } catch (e) {}
