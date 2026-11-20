@@ -68,7 +68,7 @@ function coachLines(sc) {
   if (SC.indexOf(sc) === 0 && cc.intro) { var I = typeof cc.intro === 'function' ? cc.intro(ctx) : cc.intro; pre = I.length; L = I.concat(L); }
   if (!L.length) return null;
   L = L.map(function (l) { return typeof l === 'string' ? { t: l } : Object.assign({}, l); });
-  if (idx >= 0 && own && L[pre]) { var l0 = L[pre], n = idx + 1; l0.eb = 'Step ' + n + ' of ' + tot + ' \u00B7 ' + sc.name; l0.say = 'Step ' + n + ' of ' + tot + '. ' + sc.name + '. ' + (idx > 0 ? 'You have finished ' + idx + (idx === 1 ? ' step' : ' steps') + ' already. ' : '') + (l0.say || l0.t); }
+  if (idx >= 0 && own && L[pre]) { var l0 = L[pre], n = idx + 1; l0.eb = 'Step ' + n + ' of ' + tot + ' \u00B7 ' + (l0.skill ? 'Skill: ' + l0.skill : sc.name); }
   return L;
 }
 function coachRun(force, after) {

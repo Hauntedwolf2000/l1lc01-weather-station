@@ -65,23 +65,16 @@ scenes.push(Kit.personal({ themes: THEMES, label: 'My weather journal', findings
 function outcome(S, D) { return SEASONS[D.season].n + ' Weather Reporter'; }
 function art(S, D) { return '<div class="thg" style="grid-template-columns:repeat(2,1fr);gap:20px 40px;align-content:center">' + D.sky1.map(function (k) { return '<div style="width:200px;max-width:100%">' + skySvg(k) + '</div>'; }).join('') + '</div>'; }
 Kit.run({ coach: {
-  intro: function (c) { return [
-    { t: 'Hi! I am Sunny, your weather guide. Welcome to the Weather Station!' },
-    { t: 'Your goal: become a weather reporter and finish a real weather journal.', say: 'Your goal is to become a weather reporter, and finish your very own weather journal.' },
-    { t: 'Here is what you will learn:', say: 'Here is what you will learn.', list: ['Observe the weather carefully', 'Record it in a journal', 'Plot numbers on a chart', 'Compare one day with another'] },
-    { t: 'There are ' + c.total + ' steps. Watch the bar at the top. It fills up each time you finish a step.', say: 'There are ' + c.total + ' steps. Watch the bar at the top of the screen. It fills up every time you finish a step.', steps: true, spot: '.prog' },
-    { t: 'Before each step I will tell you what to do. Then it is your turn! You get up to three tries, so do not worry. Let us begin!', say: 'Before each step, I will tell you what to do. Then it is your turn. You get up to three tries, so do not worry. Let us begin!' }
+  intro: function (c) { var N = window.NARRATION; return [
+    { id: 'intro1', t: N.intro1 },
+    { id: 'intro2', t: N.intro2 },
+    { id: 'intro3', t: N.intro3, list: ['Observe the weather carefully', 'Record it in a journal', 'Plot numbers on a chart', 'Compare one day with another'] },
+    { id: 'intro4', t: N.intro4, steps: true, spot: '.prog' }
   ]; },
-  scenes: {
-    season: [{ t: 'First, pick the season for your weather week. Tap one card: Monsoon, Spring or Summer.' }, { t: 'The season decides how warm or cool your days will be. Then press Next.' }],
-    read: [{ t: 'Look at each thermometer. Find where the red line stops.' }, { t: 'Each small mark is one degree Celsius. Type the number for every day, then press Check.', say: 'Each small mark is one degree Celsius. Type the number for every day, then press Check.' }],
-    sky: [{ t: 'Look at each window. What is the sky doing that day?' }, { t: 'Drag the right word onto each window, then press Check.' }],
-    journal: [{ t: 'Now write your journal page for Day 5.' }, { t: 'Copy the temperature and the sky from the station log. Then pick the feeling that suits the weather. Drag each note to the right place and press Check.' }],
-    chart: [{ t: 'Time to plot the chart for the second week.' }, { t: 'Drag each dot up or down to its temperature in the station log. You can also tap a column, or use the arrow keys.' }, { t: 'When all four dots are placed, press Check.' }],
-    range: [{ t: 'Last question! Find the hottest day and the coldest day in the log.' }, { t: 'Take the small number away from the big number. That is how many degrees warmer the hottest day was. Type it and press Check.' }],
-    personalise: [{ t: 'Almost done! Read your findings. Press Edit if you want to change them.' }, { t: 'Then choose the colours for your certificate and press Next.' }],
-    review: [{ t: 'Your project is ready! Look it over, then press Submit to get your certificate.' }]
-  } },
+  scenes: (function () { var N = window.NARRATION; function L(id, skill) { return [{ id: id, t: N[id], skill: skill }]; } return {
+    season: L('season', 'Planning'), read: L('read', 'Measuring'), sky: L('sky', 'Observing'), journal: L('journal', 'Recording'),
+    chart: L('chart', 'Charting'), range: L('range', 'Comparing'), personalise: L('personalise'), review: L('review')
+  }; })() },
   guideSvg: guideSvg, scenes: scenes, themes: THEMES, guideName: 'Sunny', defaultName: 'Young Reporter', artTitle: 'Your weather week',
   dataKey: function (Sx) { return Sx.x.season ? Sx.seed + '|' + Sx.x.season : ''; }, data: function (Sx) { return make(Sx.seed, Sx.x.season); },
   itemNames: { read: 'Read thermometers', sky: 'Label the sky', journal: 'Write the journal', chart: 'Plot the chart', range: 'Compare days' },

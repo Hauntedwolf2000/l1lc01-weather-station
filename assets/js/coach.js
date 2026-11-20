@@ -16,9 +16,16 @@ window.Coach = (function () {
     try { var v = speechSynthesis.getVoices() || [], f = function (re) { return v.filter(function (x) { return re.test(x.name) && /^en/i.test(x.lang); })[0]; };
       return f(/Zira|Aria|Jenny|Samantha|Google UK English Female|Google US English|Female/i) || v.filter(function (x) { return /^en/i.test(x.lang); })[0] || null; } catch (e) { return null; }
   }
-  function say(text, ended) {
+  var AUD = null;
+  function audStop() { if (AUD) { try { AUD.onended = AUD.onerror = AUD.onplay = null; AUD.pause(); } catch (e) {} AUD = null; } }
+  function say(text, ended, id) {
     var my = tok, done = false, est = Math.max(2200, text.length * 62 + 1200);
-    function fin() { if (done || my !== tok) return; done = true; clearTimeout(tfb); ended(); }
+    function fin() { if (done || my !== tok) return; done = true; clearTimeout(tfb); audStop(); ended(); }
+    if (id) { // recorded voice-over
+      try { var a = new Audio('assets/audio/' + id + '.mp3'); AUD = a; a.onplay = function () { if (my === tok && root) root.classList.add('talk'); };
+        a.onended = function () { if (my !== tok) return; if (root) root.classList.remove('talk'); setTimeout(fin, 500); };
+        a.onerror = function () { if (my === tok && AUD === a) { AUD = null; say(text, ended); } }; tfb = setTimeout(fin, 20000);
+        var pr = a.play(); if (pr && pr.catch) pr.catch(function () { if (my === tok && AUD === a) { AUD = null; clearTimeout(tfb); say(text, ended); } }); return; } catch (e) {} }
     if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) { tfb = setTimeout(fin, est); return; }
     try {
       speechSynthesis.cancel();
@@ -36,7 +43,7 @@ window.Coach = (function () {
 
   function showLine(i) {
     if (!st || !root) return; var my = ++tok, L = st.lines[i], bub = root.querySelector('.say');
-    clearTimers(); root.classList.remove('talk'); try { speechSynthesis.cancel(); } catch (e) {} spotClear();
+    clearTimers(); audStop(); root.classList.remove('talk'); try { speechSynthesis.cancel(); } catch (e) {} spotClear();
     st.i = i; bub.classList.remove('show');
     setTimeout(function () {
       if (my !== tok || !st || !root) return;
@@ -49,11 +56,11 @@ window.Coach = (function () {
       if (L.spot) { var s = document.querySelector(L.spot); if (s) s.classList.add('cspot'); }
       Array.prototype.forEach.call(bub.querySelectorAll('.ls li'), function (x, k) { setTimeout(function () { if (my === tok) x.classList.add('show'); }, 900 + k * 1500); });
       Array.prototype.forEach.call(bub.querySelectorAll('.jr i'), function (x, k) { setTimeout(function () { if (my === tok) x.classList.add('f'); }, 1200 + k * 600); });
-      say(L.say || L.t, function () { if (my !== tok || !st) return; if (i < st.lines.length - 1) showLine(i + 1); else leave(); });
+      say(L.say || L.t, function () { if (my !== tok || !st) return; if (i < st.lines.length - 1) showLine(i + 1); else leave(); }, L.id);
     }, i === 0 ? 0 : 260);
   }
   function leave() {
-    if (!st || st.leaving) return; st.leaving = true; tok++; clearTimers(); try { speechSynthesis.cancel(); } catch (e) {}
+    if (!st || st.leaving) return; st.leaving = true; tok++; clearTimers(); audStop(); try { speechSynthesis.cancel(); } catch (e) {}
     spotClear(); var r = root, o = st.o; r.querySelector('.say').classList.remove('show'); r.classList.remove('talk', 'idle'); r.classList.add('off');
     setTimeout(function () { if (r.parentNode) r.parentNode.removeChild(r); if (root === r) { root = null; st = null; inertSet(false); } if (o.done) o.done(); }, 700);
   }
@@ -73,9 +80,9 @@ window.Coach = (function () {
     var active = true; try { active = navigator.userActivation ? navigator.userActivation.hasBeenActive : true; } catch (e) {}
     if (!active) { // first screen of a fresh page: speech needs a tap, so ask for one (the grey shade fades in first)
       root.classList.add('on'); var g = document.createElement('div'); g.className = 'gate'; g.innerHTML = '<button type="button">Tap to meet your guide</button>'; root.appendChild(g);
-      g.querySelector('button').addEventListener('click', function () { g.parentNode.removeChild(g); try { var u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch (e) {} begin(); }); g.querySelector('button').focus();
+      g.querySelector('button').addEventListener('click', function () { g.parentNode.removeChild(g); begin(); }); g.querySelector('button').focus();
     } else begin();
   }
-  function stop() { if (!st && !root) return; tok++; try { speechSynthesis.cancel(); } catch (e) {} clearTimers(); spotClear(); if (root && root.parentNode) root.parentNode.removeChild(root); root = null; st = null; inertSet(false); }
+  function stop() { if (!st && !root) return; tok++; audStop(); try { speechSynthesis.cancel(); } catch (e) {} clearTimers(); spotClear(); if (root && root.parentNode) root.parentNode.removeChild(root); root = null; st = null; inertSet(false); }
   return { play: play, stop: stop, active: function () { return !!st; }, skip: function () { if (st) leave(); } };
 })();
