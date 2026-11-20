@@ -22,24 +22,25 @@ window.Coach = (function () {
     var my = tok, done = false, est = Math.max(2200, text.length * 62 + 1200);
     function fin() { if (done || my !== tok) return; done = true; clearTimeout(tfb); audStop(); ended(); }
     if (id) { // recorded voice-over
-      try { var a = new Audio('assets/audio/' + id + '.mp3'); AUD = a; a.onplay = function () { if (my === tok && root) root.classList.add('talk'); }; a.onplaying = a.ondurationchange = function () { if (my === tok && sync && isFinite(a.duration) && a.duration > 0 && !a._synced) { a._synced = 1; sync(a.duration * 1000); } };
+      try { var a = new Audio('assets/audio/' + id + '.mp3'); AUD = a; a.onplay = function () { if (my === tok && root) root.classList.add('talk'); }; a.onplaying = function () { if (my === tok && sync && !a._synced) { a._synced = 1; sync(isFinite(a.duration) && a.duration > 0 ? a.duration * 1000 : est); } }; // the text starts the moment the voice does
         a.onended = function () { if (my !== tok) return; if (root) root.classList.remove('talk'); fin(); };
         a.onerror = function () { if (my === tok && AUD === a) { AUD = null; say(text, ended, null, sync); } }; tfb = setTimeout(fin, 30000);
         var pr = a.play(); if (pr && pr.catch) pr.catch(function () { if (my === tok && AUD === a) { AUD = null; clearTimeout(tfb); say(text, ended, null, sync); } }); return; } catch (e) {} }
-    if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) { tfb = setTimeout(fin, est); return; }
+    if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) { if (sync) sync(est); tfb = setTimeout(fin, est); return; }
     try {
       speechSynthesis.cancel();
       var u = new SpeechSynthesisUtterance(text), v = pickVoice(); if (v) u.voice = v; u.lang = (v && v.lang) || 'en-US'; u.rate = 0.92; u.pitch = 1.25;
-      u.onstart = function () { if (my === tok && root) root.classList.add('talk'); };
+      u.onstart = function () { if (my === tok && root) { root.classList.add('talk'); if (sync) sync(est); } };
       u.onend = u.onerror = function () { if (my !== tok) return; if (root) root.classList.remove('talk'); fin(); };
       speechSynthesis.speak(u); tfb = setTimeout(fin, est * 1.8 + 2500); // some browsers never fire onend
-    } catch (e) { tfb = setTimeout(fin, est); }
+    } catch (e) { if (sync) sync(est); tfb = setTimeout(fin, est); }
   }
   var tyc = null;
   function typeText(el, text, my) { // subtitles type out over time; the full text is laid out invisibly first so the bubble never grows or jumps
     var vis = document.createElement('span'), hid = document.createElement('span'); hid.style.visibility = 'hidden'; hid.textContent = text; el.textContent = ''; el.appendChild(vis); el.appendChild(hid);
-    tyc = { t0: Date.now(), total: Math.max(1200, text.length * 55) };
-    clearInterval(tty); tty = setInterval(function () { if (my !== tok || !tyc) { clearInterval(tty); return; } var f = Math.min(1, (Date.now() - tyc.t0) / tyc.total), i = Math.ceil(text.length * f); vis.textContent = text.slice(0, i); hid.textContent = text.slice(i); if (f >= 1) clearInterval(tty); }, 30);
+    tyc = { t0: null, total: Math.max(1200, text.length * 55) }; // t0 stays empty (no text yet) until the voice starts
+    setTimeout(function () { if (my === tok && tyc && tyc.t0 === null) typeSync(tyc.total / 0.88); }, 3000); // safety: never leave the bubble blank if audio is slow
+    clearInterval(tty); tty = setInterval(function () { if (my !== tok || !tyc) { clearInterval(tty); return; } if (tyc.t0 === null) return; var f = Math.min(1, (Date.now() - tyc.t0) / tyc.total), i = Math.ceil(text.length * f); vis.textContent = text.slice(0, i); hid.textContent = text.slice(i); if (f >= 1) clearInterval(tty); }, 30);
   }
   function typeSync(ms) { if (tyc) { tyc.t0 = Date.now(); tyc.total = Math.max(800, ms * 0.88); } } // finish typing just before the voice finishes
 
