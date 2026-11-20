@@ -15,8 +15,8 @@ function make(seed, season) {
 }
 window.WeatherTest = function (n) { var bad = 0; for (var i = 0; i < n; i++) Object.keys(SEASONS).forEach(function (s) { var D = make('s' + i, s), u = {}; D.w1.concat(D.w2).forEach(function (x) { u[x] = 1; }); if (Object.keys(u).length !== 8 || D.range < 3 || new Set(D.sky1).size !== 4) bad++; }); return bad; };
 
-function guideSvg() { return '<img src="assets/img/sunny.png" alt="">'; } // the guide (Sunny): image made with agy, transparent PNG
-function skySvg(t) { return '<img class="skyimg" src="assets/img/sky-' + t + '.jpg" alt="">'; } // sky scenes made with agy
+function guideSvg() { return '<img src="assets/img/sunny.webp" alt="">'; } // the guide (Sunny): image made with agy, transparent PNG
+function skySvg(t) { return '<img class="skyimg" src="assets/img/sky-' + t + '.webp" alt="">'; } // sky scenes made with agy
 function thermo(t, day) {
   var H = 200, y0 = 14, Y = function (v) { return y0 + (40 - v) / 30 * H; }, s = '<svg viewBox="0 -6 170 276" role="img" aria-label="Day ' + day + ' thermometer"><rect x="82" y="6" width="28" height="232" rx="14" fill="#fff" stroke="#24405F" stroke-width="4"/>';
   for (var v = 10; v <= 40; v++) { var len = v % 10 === 0 ? 22 : v % 5 === 0 ? 15 : 8; s += '<line x1="78" x2="' + (78 - len) + '" y1="' + Y(v) + '" y2="' + Y(v) + '" stroke="#24405F" stroke-width="' + (v % 5 ? 2 : 3) + '"/>'; if (v % 10 === 0) s += '<text x="52" y="' + (Y(v) + 9) + '" font-size="28" font-weight="700" fill="#24405F" text-anchor="end">' + v + '</text>'; }

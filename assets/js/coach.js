@@ -4,7 +4,7 @@
    lines: [string | {t, say?, eb?, list?, steps?, spot?}] */
 'use strict';
 window.Coach = (function () {
-  var ART = 'assets/img/sunny.png';
+  var ART = 'assets/img/sunny.webp';
   var root = null, st = null, tok = 0, tfb = 0, tmt = 0, tty = 0;
   var SKIP_ICO = '<svg viewBox="0 0 48 48" fill="none"><path d="M8 10l18 14L8 38V10Zm20 0l18 14-18 14V10Z" fill="currentColor"/></svg>';
 
@@ -69,7 +69,7 @@ window.Coach = (function () {
     sk.addEventListener('click', leave);
     root.querySelector('.say').addEventListener('click', function (e) { if (!e.target.closest('.nxt') || !st) return; if (st.i < st.lines.length - 1) showLine(st.i + 1); else leave(); });
     root.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.preventDefault(); leave(); } });
-    function begin() { root.classList.add('on', 'in'); setTimeout(function () { if (root) root.classList.add('idle'); }, 900); setTimeout(function () { if (st) showLine(0); }, 800); sk.focus(); }
+    function begin() { var im = root.querySelector('.who img'), go = function () { if (!root) return; root.classList.add('on', 'in'); setTimeout(function () { if (root) root.classList.add('idle'); }, 900); setTimeout(function () { if (st) showLine(0); }, 800); sk.focus(); }; if (im && im.decode) im.decode().then(go, go); else go(); }
     var active = true; try { active = navigator.userActivation ? navigator.userActivation.hasBeenActive : true; } catch (e) {}
     if (!active) { // first screen of a fresh page: speech needs a tap, so ask for one (the grey shade fades in first)
       root.classList.add('on'); var g = document.createElement('div'); g.className = 'gate'; g.innerHTML = '<button type="button">Tap to meet your guide</button>'; root.appendChild(g);
